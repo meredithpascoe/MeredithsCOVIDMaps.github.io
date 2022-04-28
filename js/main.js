@@ -1,98 +1,105 @@
-mapboxgl.accessToken =
-'pk.eyJ1IjoiamFrb2J6aGFvIiwiYSI6ImNpcms2YWsyMzAwMmtmbG5icTFxZ3ZkdncifQ.P9MBej1xacybKcDN_jehvw';
-let map = new mapboxgl.Map({
-container: 'map', // container ID
-style: 'mapbox://styles/mapbox/dark-v10',
-zoom: 5, // starting zoom
-center: [138, 38] // starting center
-});
+ mapboxgl.accessToken =
+            'pk.eyJ1IjoiamFrb2J6aGFvIiwiYSI6ImNpcms2YWsyMzAwMmtmbG5icTFxZ3ZkdncifQ.P9MBej1xacybKcDN_jehvw';
+        const map = new mapboxgl.Map({
+            container: 'map', // container ID
+            style: 'mapbox://styles/mapbox/light-v10', // style URL
+            zoom: 3, // starting zoom
+            center: [-100, 40] // starting center
+        });
 
-const grades = [4, 5, 6],
-colors = ['rgb(208,209,230)', 'rgb(103,169,207)', 'rgb(1,108,89)'],
-radii = [5, 15, 20];
+        // load data and add as layer
+        async function geojsonFetch() {
+            let response = await fetch('assets/USCOVIDCases_042122.geojson');
+            let cb_2018_us_state_500k_Projec = await response.json();
 
-//load data to the map as new layers.
-//map.on('load', function loadingData() {
-map.on('load', () => { //simplifying the function statement: arrow with brackets to define a function
+            map.on('load', function loadingData() {
+                map.addSource('cb_2018_us_state_500k_Projec', {
+                    type: 'geojson',
+                    data: cb_2018_us_state_500k_Projec
+                });
+                map.addLayer({
+                    'id': 'cb_2018_us_state_500k_Projec-layer',
+                    'type': 'fill',
+                    'source': 'cb_2018_us_state_500k_Projec',
+                    'paint': {
+                        'fill-color': [
+                            'step',
+                            ['get', 'COVIDCases'],
+                            '#FFEDA0',   // stop_output_0
+                            260735,          // stop_input_0
+                            '#FED976',   // stop_output_1
+                            499619,          // stop_input_1
+                            '#FEB24C',   // stop_output_2
+                            772857,          // stop_input_2
+                            '#FD8D3C',   // stop_output_3
+                            1298880,         // stop_input_3
+                            '#FC4E2A',   // stop_output_4
+                            1599011,         // stop_input_4
+                            '#E31A1C',   // stop_output_5
+                            2235034,         // stop_input_5
+                            '#BD0026',   // stop_output_6
+                            3112315,        // stop_input_6
+                            "#800026"    // stop_output_7
+                        ],
+                        'fill-outline-color': '#BBBBBB',
+                        'fill-opacity': 0.7,
+                    }
+                });
 
-// when loading a geojson, there are two steps
-// add a source of the data and then add the layer out of the source
-map.addSource('earthquakes', {
-    type: 'geojson',
-    data: 'assets/earthquakes.geojson'
-});
+                const layers = [
+                    '121193-249901',
+                    '260735-479077',
+                    '499619-761356',
+                    '772857-1235893',
+                    '1298880-1480490',
+                    '1599011-2019174',
+                    '2235034-2803378',
+                    '3112315 and more'
+                ];
+                const colors = [
+                    '#FF573370',
+                    '#FED97670',
+                    '#FEB24C70',
+                    '#FD8D3C70',
+                    '#FC4E2A70',
+                    '#E31A1C70',
+                    '#BD002670',
+                    '#80002670'
+                ];
 
-map.addLayer({
-        'id': 'earthquakes-point',
-        'type': 'circle',
-        'source': 'earthquakes',
-        'minzoom': 5,
-        'paint': {
-            // increase the radii of the circle as the zoom level and dbh value increases
-            'circle-radius': {
-                'property': 'mag',
-                'stops': [
-                    [{
-                        zoom: 5,
-                        value: grades[0]
-                    }, radii[0]],
-                    [{
-                        zoom: 5,
-                        value: grades[1]
-                    }, radii[1]],
-                    [{
-                        zoom: 5,
-                        value: grades[2]
-                    }, radii[2]]
-                ]
-            },
-            'circle-color': {
-                'property': 'mag',
-                'stops': [
-                    [grades[0], colors[0]],
-                    [grades[1], colors[1]],
-                    [grades[2], colors[2]]
-                ]
-            },
-            'circle-stroke-color': 'white',
-            'circle-stroke-width': 1,
-            'circle-opacity': 0.6
+                // create legend
+                const legend = document.getElementById('legend');
+                legend.innerHTML = "<b>Total State COVID Cases<br>(as of April 2022)</b><br><br>";
+
+
+                layers.forEach((layer, i) => {
+                    const color = colors[i];
+                    const item = document.createElement('div');
+                    const key = document.createElement('span');
+                    key.className = 'legend-key';
+                    key.style.backgroundColor = color;
+
+                    const value = document.createElement('span');
+                    value.innerHTML = `${layer}`;
+                    item.appendChild(key);
+                    item.appendChild(value);
+                    legend.appendChild(item);
+                });
+            });
+
+            map.on('mousemove', ({point}) => {
+                const state = map.queryRenderedFeatures(point, {
+                    layers: ['cb_2018_us_state_500k_Projec-layer']
+                });
+                document.getElementById('text-escription').innerHTML = state.length ?
+                    `<h3>${state[0].properties.Name}</h3><p><strong><em>${state[0].properties.COVIDCases}</strong> Total COVID Cases</em></p>` :
+                    `<p>Hover over a state!</p>`;
+            });
         }
-    },
-    'waterway-label'
-);
 
+        geojsonFetch();
+    </script>
 
-// click on tree to view magnitude in a popup
-map.on('click', 'earthquakes-point', (event) => {
-    new mapboxgl.Popup()
-        .setLngLat(event.features[0].geometry.coordinates)
-        .setHTML(`<strong>Magnitude:</strong> ${event.features[0].properties.mag}`)
-        .addTo(map);
-});
+</body>
 
-});
-
-
-// create legend
-const legend = document.getElementById('legend');
-
-//set up legend grades and labels
-var labels = ['<strong>Magnitude</strong>'], vbreak;
-//iterate through grades and create a scaled circle and label for each
-for (var i = 0; i < grades.length; i++) {
-vbreak = grades[i];
-// you need to manually adjust the radius of each dot on the legend 
-// in order to make sure the legend can be properly referred to the dot on the map.
-dot_radii = 2 * radii[i];
-labels.push(
-    '<p class="break"><i class="dot" style="background:' + colors[i] + '; width: ' + dot_radii +
-    'px; height: ' +
-    dot_radii + 'px; "></i> <span class="dot-label" style="top: ' + dot_radii / 2 + 'px;">' + vbreak +
-    '</span></p>');
-
-}
-const source =
-'<p style="text-align: right; font-size:10pt">Source: <a href="https://earthquake.usgs.gov/earthquakes/">USGS</a></p>';
-
-legend.innerHTML = labels.join('') + source;
+</html>
